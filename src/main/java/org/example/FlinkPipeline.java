@@ -16,15 +16,12 @@ public class FlinkPipeline {
     public static void createPipeline() throws Exception {
         StreamExecutionEnvironment env = StreamExecutionEnvironment.getExecutionEnvironment();
 
-        // Set up Kafka properties
         Properties kafkaProps = new Properties();
         kafkaProps.setProperty("bootstrap.servers", "localhost:9092");
         kafkaProps.setProperty("group.id", "flink-consumer-group");
 
-        // Create Kafka consumer
         FlinkKafkaConsumer<String> kafkaConsumer = new FlinkKafkaConsumer<>("topic_01", new SimpleStringSchema(), kafkaProps);
 
-        // Add Kafka consumer to the Flink pipeline
         DataStream<String> words = env.addSource(kafkaConsumer);
 
         DataStream<Tuple2<String, Integer>> wordLengths = words.map(new MapFunction<String, Tuple2<String, Integer>>() {

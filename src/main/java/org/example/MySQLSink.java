@@ -21,7 +21,6 @@ public class MySQLSink extends RichSinkFunction<Tuple2<String,Integer>>{
     }
     @Override
     public void invoke(Tuple2<String, Integer> value, Context context) throws Exception {
-        // Insert data into MySQL table
         preparedStatement.setString(1, value.f0);
         preparedStatement.setInt(2, value.f1);
         preparedStatement.executeUpdate();
@@ -30,7 +29,6 @@ public class MySQLSink extends RichSinkFunction<Tuple2<String,Integer>>{
     @Override
     public void close() throws Exception {
         super.close();
-        // Close connection to MySQL database
         if (connection != null) {
             connection.close();
         }
