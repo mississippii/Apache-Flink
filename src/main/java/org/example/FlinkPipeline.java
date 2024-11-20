@@ -1,13 +1,11 @@
 package org.example;
 
-import org.apache.flink.api.common.functions.FlatMapFunction;
 import org.apache.flink.api.common.functions.MapFunction;
 import org.apache.flink.api.common.serialization.SimpleStringSchema;
 import org.apache.flink.api.java.tuple.Tuple2;
 import org.apache.flink.streaming.api.datastream.DataStream;
 import org.apache.flink.streaming.api.environment.StreamExecutionEnvironment;
 import org.apache.flink.streaming.connectors.kafka.FlinkKafkaConsumer;
-import org.apache.flink.util.Collector;
 
 import java.util.Properties;
 
@@ -20,7 +18,7 @@ public class FlinkPipeline {
         kafkaProps.setProperty("bootstrap.servers", "localhost:9092");
         kafkaProps.setProperty("group.id", "flink-consumer-group");
 
-        FlinkKafkaConsumer<String> kafkaConsumer = new FlinkKafkaConsumer<>("topic_01", new SimpleStringSchema(), kafkaProps);
+        FlinkKafkaConsumer<String> kafkaConsumer = new FlinkKafkaConsumer<>("flink1", new SimpleStringSchema(), kafkaProps);
 
         DataStream<String> words = env.addSource(kafkaConsumer);
 
@@ -30,8 +28,11 @@ public class FlinkPipeline {
                 return new Tuple2<>(word, word.length());
             }
         });
-
+        wordLengths
+                .map(tuple -> tuple.f0)
+                .print("Consumed BY Flink");
         wordLengths.addSink(new MySQLSink());
+
         env.execute("Flink Word Count");
     }
 

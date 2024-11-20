@@ -24,10 +24,13 @@ public class WordProducer {
         KafkaProducer<String, String> producer = new KafkaProducer<>(props);
 
         try {
+            int id=1;
             while (true) {
-                String word = generateWord();
-                producer.send(new ProducerRecord<>("topic_01", word));
+                String word = generateWord(id);
+                System.out.println("Generate by Producer "+word);
+                producer.send(new ProducerRecord<>("flink1", word));
                 Thread.sleep(1000);
+                id++;
             }
         } catch (InterruptedException e) {
             e.printStackTrace();
@@ -35,8 +38,8 @@ public class WordProducer {
             producer.close();
         }
     }
-    public static String generateWord() {
+    public static String generateWord(int id) {
         String[] words = {"hello", "world", "apache", "flink", "kafka", "stream", "example"};
-        return words[(int) (Math.random() * words.length)];
+        return words[(int) (Math.random() * words.length)]+" "+id;
     }
 }
