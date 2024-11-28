@@ -20,6 +20,8 @@ public class WordProducer {
         props.put("bootstrap.servers", "localhost:9092");
         props.put("key.serializer", "org.apache.kafka.common.serialization.StringSerializer");
         props.put("value.serializer", "org.apache.kafka.common.serialization.StringSerializer");
+        props.put("acks", "all");
+        props.put("retries", 3);
 
         KafkaProducer<String, String> producer = new KafkaProducer<>(props);
 

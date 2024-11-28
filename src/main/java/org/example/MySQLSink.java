@@ -20,7 +20,7 @@ public class MySQLSink extends RichSinkFunction<Tuple2<String, Integer>> {
     public void open(Configuration parameters) throws Exception {
         super.open(parameters);
         try {
-            connection = DriverManager.getConnection("jdbc:mysql://localhost:3306/microservice", "root", "1234");
+            connection = DriverManager.getConnection("jdbc:mysql://103.248.13.73:3306/microservices", "root", "1234");
             String sql = "INSERT INTO flinkWord (word, count) VALUES (?, ?)";
             preparedStatement = connection.prepareStatement(sql);
         } catch (SQLException e) {
