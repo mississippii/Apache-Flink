@@ -17,7 +17,7 @@ public class WordProducer {
     }
     public  void startWordProduce(){
         Properties props = new Properties();
-        props.put("bootstrap.servers", "localhost:9092");
+        props.put("bootstrap.servers", "103.248.13.73:9092");
         props.put("key.serializer", "org.apache.kafka.common.serialization.StringSerializer");
         props.put("value.serializer", "org.apache.kafka.common.serialization.StringSerializer");
         props.put("acks", "all");
@@ -29,7 +29,6 @@ public class WordProducer {
             int id=1;
             while (true) {
                 String word = generateWord(id);
-                System.out.println("Generate by Producer "+word);
                 producer.send(new ProducerRecord<>("flink1", word));
                 Thread.sleep(1000);
                 id++;
