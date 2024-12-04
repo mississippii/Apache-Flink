@@ -10,44 +10,49 @@ import java.sql.Connection;
 import java.sql.DriverManager;
 import java.sql.PreparedStatement;
 import java.sql.SQLException;
+import java.util.concurrent.TimeUnit;
 
 public class MySQLSink extends RichSinkFunction<Tuple2<String, Integer>> {
 
-    private Connection connection;
-    private PreparedStatement preparedStatement;
+    private static final String MYSQL_URL = "jdbc:mysql://103.95.96.98:3306/ccl1";
+    private static final String USER = "tbuser";
+    private static final String PASSWORD = "Takay1takaane$";
+    private static final String SQL = "INSERT INTO flinkWord (word, count, entry_time) VALUES (?, ?, ?)";
+    private transient Connection connection;
+    private transient PreparedStatement preparedStatement;
+    private static final Logger logger = LoggerFactory.getLogger(MySQLSink.class);
 
     @Override
     public void open(Configuration parameters) throws Exception {
         super.open(parameters);
         try {
-            connection = DriverManager.getConnection("jdbc:mysql://103.248.13.73:3306/microservices", "root", "1234");
-            String sql = "INSERT INTO flinkWord (word, count) VALUES (?, ?)";
-            preparedStatement = connection.prepareStatement(sql);
+            connection = DriverManager.getConnection(MYSQL_URL, USER, PASSWORD);
+            preparedStatement = connection.prepareStatement(SQL);
         } catch (SQLException e) {
+            logger.error("Failed to establish MySQL connection", e);
             throw new RuntimeException("Failed to establish MySQL connection", e);
         }
     }
 
     @Override
     public void invoke(Tuple2<String, Integer> value, Context context) throws Exception {
-        boolean success = false;
-        int retries = 0;
-        while (retries < 3 && !success) {
+        int retries = 3;
+        while (retries > 0) {
             try {
-                preparedStatement.setString(1, value.f0);
-                preparedStatement.setInt(2, value.f1);
+                preparedStatement.setString(1, value.f0); // word
+                preparedStatement.setInt(2, value.f1);    // count
+                preparedStatement.setTimestamp(3, new java.sql.Timestamp(System.currentTimeMillis()));
                 preparedStatement.executeUpdate();
-                success = true;
+                logger.info("Inserted data: word = {}, count = {}, entry_time = {}", value.f0, value.f1, System.currentTimeMillis());
+                return;
             } catch (SQLException e) {
                 if (isLockException(e)) {
-                    retries++;
-
-                    if (retries >= 3) {
+                    retries--;
+                    if (retries == 0) {
                         throw new RuntimeException("MySQL insertion failed due to lock issues", e);
                     }
-                    Thread.sleep(1000);
+                    TimeUnit.SECONDS.sleep(1); // Backoff before retry
                 } else {
-
                     throw new RuntimeException("Failed to insert data into MySQL", e);
                 }
             }

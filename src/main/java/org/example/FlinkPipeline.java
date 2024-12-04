@@ -1,11 +1,9 @@
 package org.example;
 
-import org.apache.flink.api.common.functions.MapFunction;
 import org.apache.flink.api.common.functions.RichMapFunction;
 import org.apache.flink.api.common.serialization.SimpleStringSchema;
 import org.apache.flink.api.common.typeinfo.Types;
 import org.apache.flink.api.java.tuple.Tuple2;
-import org.apache.flink.core.fs.FileSystem;
 import org.apache.flink.runtime.state.filesystem.FsStateBackend;
 import org.apache.flink.streaming.api.CheckpointingMode;
 import org.apache.flink.streaming.api.datastream.DataStream;
@@ -16,6 +14,8 @@ import org.apache.flink.streaming.connectors.kafka.FlinkKafkaConsumer;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import java.sql.Time;
+import java.util.Date;
 import java.util.Properties;
 
 public class FlinkPipeline {
@@ -31,7 +31,7 @@ public class FlinkPipeline {
         env.getCheckpointConfig().enableExternalizedCheckpoints(
                 CheckpointConfig.ExternalizedCheckpointCleanup.RETAIN_ON_CANCELLATION
         );
-
+        env.setStateBackend(new FsStateBackend("file:///tmp/flink-checkpoints"));
         Properties kafkaProps = new Properties();
         kafkaProps.setProperty("bootstrap.servers", "103.248.13.73:9092");
         kafkaProps.setProperty("group.id", "flink-consumer-group");
@@ -41,36 +41,31 @@ public class FlinkPipeline {
 
         DataStreamSource<String> words = env.addSource(kafkaConsumer);
 
-        DataStream<Tuple2<String, Integer>> wordLengths = words
+        DataStream<String> processedWords = words
+                .map(new WordProcessingMetric())
+                .name("Word Processing Metric");
+
+        DataStream<Tuple2<String, Integer>> wordLengths =processedWords
                 .map(new RichMapFunction<String, Tuple2<String, Integer>>() {
                     @Override
                     public Tuple2<String, Integer> map(String word) throws Exception {
-                        String taskId = getRuntimeContext().getTaskName();
                         String parallelism = String.valueOf(getRuntimeContext().getNumberOfParallelSubtasks());
-                        logger.info("Task ID: {}, Parallelism: {}, Word Picked: {}", taskId, parallelism, word);
+                        String hostName = java.net.InetAddress.getLocalHost().getHostName();
+                        long timestamp = System.currentTimeMillis();
+                        String formattedTime = new java.text.SimpleDateFormat("yyyy-MM-dd HH:mm:ss.SSS").format(new java.util.Date(timestamp));
+                        logger.info("Timestamp: {}, TaskManager Host: {}, Parallelism: {}, Word Picked: {}", formattedTime, hostName, parallelism, word);
+
+                        System.out.println(String.format("Timestamp: %s, TaskManager Host: %s, Parallelism: %s, Word Picked: %s",
+                                formattedTime, hostName, parallelism, word));
                         return new Tuple2<>(word, word.length());
                     }
                 })
                 .returns(Types.TUPLE(Types.STRING, Types.INT))
                 .setParallelism(4);
+        Thread.sleep(5000);
+        wordLengths.addSink( new MySQLSink());
 
-        DataStream<String> delayedWords = wordLengths
-                .map(tuple -> {
-                    Thread.sleep(6000);
-                    return tuple.f0 + ", " + tuple.f1;
-                })
-                .name("Simulate Delay");
-
-        String outputPath = "/opt/flink-1.20.0/examples/jar/word_counts/";
-        delayedWords
-                .writeAsText(outputPath, FileSystem.WriteMode.OVERWRITE)
-                .name("Write to File");
-
-        delayedWords.print("Keys Written After Delay");
-
-//        wordLengths.addSink(new MySQLSink());
-
-        env.execute("Flink Word Count");
+        env.execute("Flink Word Count with Metrics");
     }
 
 }
