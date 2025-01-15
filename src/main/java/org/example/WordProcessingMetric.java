@@ -13,7 +13,6 @@ public class WordProcessingMetric extends RichMapFunction<String, String> {
 
     @Override
     public void open(Configuration parameters) {
-        // Initialize the counter
         wordCounter = getRuntimeContext()
                 .getMetricGroup()
                 .counter("processedWords");

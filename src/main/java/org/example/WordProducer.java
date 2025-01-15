@@ -30,7 +30,7 @@ public class WordProducer {
             while (true) {
                 String word = generateWord(id);
                 producer.send(new ProducerRecord<>("flink1", word));
-                Thread.sleep(5000);
+                Thread.sleep(100);
                 id++;
             }
         } catch (InterruptedException e) {
